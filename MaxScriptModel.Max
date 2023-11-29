@@ -21,41 +21,80 @@ fn convertToPhysicalMaterialAndReconnectMaps obj =
     )
 )
 
-fn convertMaxToGLB path exportPath =
+fn convertMaxToGLB exportPath fileTxtPath =
 (
-    for file in getFiles (path + "\\*.max") do
+    while (numLines = (getNumLines fileTxtPath)) > 0 do
     (
-        local glbFilename = exportPath + "\\" + (getFilenameFile file) + ".glb"
-        
-        -- Check if GLB file already exists
-        if not doesFileExist glbFilename then
+        local fileStream = openFile fileTxtPath mode:"r"
+        local firstLine = readLine fileStream
+        close fileStream
+
+        local glbFilename = exportPath + "\\" + (getFilenameFile firstLine) + ".glb"
+
+        try
         (
-            try
+            loadMaxFile firstLine quiet:true
+
+            for obj in objects do
             (
-                loadMaxFile file quiet:true
+                convertToPhysicalMaterialAndReconnectMaps obj
+            )
 
-                -- Apply changes to each object in the scene
-                for obj in objects do
-                (
-                    convertToPhysicalMaterialAndReconnectMaps obj
-                )
+            exportFile glbFilename #noPrompt using:GLTFExporter
+        ) catch (format "Error processing file %: %\n" firstLine (getCurrentException()))
 
-                exportFile glbFilename #noPrompt using:GLTFExporter
-            ) catch (format "Error processing file %: %\n" file (getCurrentException()))
-        )
-        else
-        (
-            format "Skipping % as it already exists.\n" glbFilename
-        )
+        -- Remove the processed file path from file.txt
+        deleteFileLine fileTxtPath 1
     )
+)
 
-    for dir in getDirectories (path + "\\*") do
+fn getNumLines filename =
+(
+    local count = 0
+    local fileStream = openFile filename mode:"r"
+    if fileStream != undefined do
     (
-        convertMaxToGLB dir exportPath
+        while not eof fileStream do
+        (
+            skipLine fileStream
+            count += 1
+        )
+        close fileStream
+    )
+    count
+)
+
+fn deleteFileLine filename lineNumber =
+(
+    local lines = #()
+    local fileStream = openFile filename mode:"r"
+    if fileStream != undefined do
+    (
+        local currentLine = 1
+        while not eof fileStream do
+        (
+            local line = readLine fileStream
+            if currentLine != lineNumber do
+                append lines line
+            currentLine += 1
+        )
+        close fileStream
+    )
+    writeFile filename lines
+)
+
+fn writeFile filename lines =
+(
+    local fileStream = createFile filename
+    if fileStream != undefined do
+    (
+        for line in lines do
+        (
+            format "%\n" line to:fileStream
+        )
+        close fileStream
     )
 )
 
 -- Usage
-convertMaxToGLB "D:\\" "D:\\maxGLB"
-
-
+convertMaxToGLB "D:\\maxGLB" "D:\\file.txt"
