@@ -2,11 +2,9 @@ fn convertToPhysicalMaterialAndReconnectMaps obj =
 (
     if obj.material != undefined and classOf obj.material != PhysicalMaterial then
     (
-        -- Create a new physical material
         local physMat = PhysicalMaterial()
         local oldMat = obj.material
 
-        -- Attempt to reconnect diffuse map (base color)
         try
         (
             if oldMat.diffuseMap != undefined then
@@ -14,72 +12,37 @@ fn convertToPhysicalMaterialAndReconnectMaps obj =
                 physMat.base_color_map = oldMat.diffuseMap
                 physMat.base_color_map_enabled = true
             )
-        ) catch (format "Error processing material for object %: %\n" obj.name (getCurrentException()))
+        ) catch ()
         
-        -- Apply the new physical material to the object
         obj.material = physMat
     )
 )
 
-fn convertMaxToGLB exportPath fileTxtPath =
+fn convertMaxToGLB file exportPath =
 (
-    local fileStream = openFile fileTxtPath mode:"r"
-    local allFiles = #()
-    if fileStream != undefined do
+    loadMaxFile file quiet:true
+
+    for obj in objects do
     (
-        while not eof fileStream do
-        (
-            append allFiles (readLine fileStream)
-        )
-        close fileStream
+        convertToPhysicalMaterialAndReconnectMaps obj
     )
 
-    for file in allFiles do
-    (
-        local glbFilename = exportPath + "\\" + (getFilenameFile file) + ".glb"
-
-        try
-        (
-            loadMaxFile file quiet:true
-
-            for obj in objects do
-            (
-                convertToPhysicalMaterialAndReconnectMaps obj
-            )
-
-            exportFile glbFilename #noPrompt using:GLTFExporter
-        ) catch (format "Error processing file %: %\n" file (getCurrentException()))
-
-        -- Remove the processed file path from file.txt
-        updateFileTxt fileTxtPath file
-    )
+    exportFile (exportPath + "\\" + (getFilenameFile file) + ".glb") #noPrompt using:GLTFExporter
 )
 
-fn updateFileTxt fileTxtPath processedFile =
+fn processFilesFromList filePath exportPath =
 (
-    local fileStream = openFile fileTxtPath mode:"r"
-    local remainingFiles = #()
-    if fileStream != undefined do
+    local fileStream = openFile filePath mode:"r"
+    if fileStream != undefined then
     (
         while not eof fileStream do
         (
             local line = readLine fileStream
-            if line != processedFile do
-                append remainingFiles line
-        )
-        close fileStream
-    )
-
-    fileStream = createFile fileTxtPath
-    if fileStream != undefined do
-    (
-        for line in remainingFiles do
-        (
-            format "%\n" line to:fileStream
+            convertMaxToGLB line exportPath
         )
         close fileStream
     )
 )
 
 -- Usage
-convertMaxToGLB "D:\\maxGLB" "D:\\file.txt"
+processFilesFromList "D:\\file.txt" "C:\\path\\to\\export\\folder"
