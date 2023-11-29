@@ -45,4 +45,4 @@ fn processFilesFromList filePath exportPath =
 )
 
 -- Usage
-processFilesFromList "D:\\file.txt" "C:\\path\\to\\export\\folder"
+processFilesFromList "D:\\file2.txt" "D:\\maxGLB"
