@@ -57,3 +57,5 @@ fn convertMaxToGLB path exportPath =
 
 -- Usage
 convertMaxToGLB "D:\\" "D:\\maxGLB"
+
+
