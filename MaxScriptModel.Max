@@ -23,17 +23,24 @@ fn convertToPhysicalMaterialAndReconnectMaps obj =
 
 fn convertMaxToGLB exportPath fileTxtPath =
 (
-    while (numLines = (getNumLines fileTxtPath)) > 0 do
+    local fileStream = openFile fileTxtPath mode:"r"
+    local allFiles = #()
+    if fileStream != undefined do
     (
-        local fileStream = openFile fileTxtPath mode:"r"
-        local firstLine = readLine fileStream
+        while not eof fileStream do
+        (
+            append allFiles (readLine fileStream)
+        )
         close fileStream
+    )
 
-        local glbFilename = exportPath + "\\" + (getFilenameFile firstLine) + ".glb"
+    for file in allFiles do
+    (
+        local glbFilename = exportPath + "\\" + (getFilenameFile file) + ".glb"
 
         try
         (
-            loadMaxFile firstLine quiet:true
+            loadMaxFile file quiet:true
 
             for obj in objects do
             (
@@ -41,54 +48,32 @@ fn convertMaxToGLB exportPath fileTxtPath =
             )
 
             exportFile glbFilename #noPrompt using:GLTFExporter
-        ) catch (format "Error processing file %: %\n" firstLine (getCurrentException()))
+        ) catch (format "Error processing file %: %\n" file (getCurrentException()))
 
         -- Remove the processed file path from file.txt
-        deleteFileLine fileTxtPath 1
+        updateFileTxt fileTxtPath file
     )
 )
 
-fn getNumLines filename =
+fn updateFileTxt fileTxtPath processedFile =
 (
-    local count = 0
-    local fileStream = openFile filename mode:"r"
+    local fileStream = openFile fileTxtPath mode:"r"
+    local remainingFiles = #()
     if fileStream != undefined do
     (
-        while not eof fileStream do
-        (
-            skipLine fileStream
-            count += 1
-        )
-        close fileStream
-    )
-    count
-)
-
-fn deleteFileLine filename lineNumber =
-(
-    local lines = #()
-    local fileStream = openFile filename mode:"r"
-    if fileStream != undefined do
-    (
-        local currentLine = 1
         while not eof fileStream do
         (
             local line = readLine fileStream
-            if currentLine != lineNumber do
-                append lines line
-            currentLine += 1
+            if line != processedFile do
+                append remainingFiles line
         )
         close fileStream
     )
-    writeFile filename lines
-)
 
-fn writeFile filename lines =
-(
-    local fileStream = createFile filename
+    fileStream = createFile fileTxtPath
     if fileStream != undefined do
     (
-        for line in lines do
+        for line in remainingFiles do
         (
             format "%\n" line to:fileStream
         )
