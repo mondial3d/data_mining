@@ -1,0 +1,59 @@
+fn convertToPhysicalMaterialAndReconnectMaps obj =
+(
+    if obj.material != undefined and classOf obj.material != PhysicalMaterial then
+    (
+        -- Create a new physical material
+        local physMat = PhysicalMaterial()
+        local oldMat = obj.material
+
+        -- Attempt to reconnect diffuse map (base color)
+        try
+        (
+            if oldMat.diffuseMap != undefined then
+            (
+                physMat.base_color_map = oldMat.diffuseMap
+                physMat.base_color_map_enabled = true
+            )
+        ) catch (format "Error processing material for object %: %\n" obj.name (getCurrentException()))
+        
+        -- Apply the new physical material to the object
+        obj.material = physMat
+    )
+)
+
+fn convertMaxToGLB path exportPath =
+(
+    for file in getFiles (path + "\\*.max") do
+    (
+        local glbFilename = exportPath + "\\" + (getFilenameFile file) + ".glb"
+        
+        -- Check if GLB file already exists
+        if not doesFileExist glbFilename then
+        (
+            try
+            (
+                loadMaxFile file quiet:true
+
+                -- Apply changes to each object in the scene
+                for obj in objects do
+                (
+                    convertToPhysicalMaterialAndReconnectMaps obj
+                )
+
+                exportFile glbFilename #noPrompt using:GLTFExporter
+            ) catch (format "Error processing file %: %\n" file (getCurrentException()))
+        )
+        else
+        (
+            format "Skipping % as it already exists.\n" glbFilename
+        )
+    )
+
+    for dir in getDirectories (path + "\\*") do
+    (
+        convertMaxToGLB dir exportPath
+    )
+)
+
+-- Usage
+convertMaxToGLB "D:\\" "D:\\maxGLB"
