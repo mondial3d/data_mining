@@ -27,8 +27,14 @@ fn convertMaxToGLB file exportPath =
         convertToPhysicalMaterialAndReconnectMaps obj
     )
 
-    exportFile (exportPath + "\\" + (getFilenameFile file) + ".glb") #noPrompt using:GLTFExporter
+    -- Generate a random name based on the current time and a random number
+    local currentTime = timestamp()
+    local randomNumber = random 10000 99999
+    local randomName = "exported_" + (currentTime as string) + "_" + (randomNumber as string)
+
+    exportFile (exportPath + "\\" + randomName + ".glb") #noPrompt using:GLTFExporter
 )
+
 
 fn processFilesFromList filePath exportPath =
 (
@@ -44,5 +50,6 @@ fn processFilesFromList filePath exportPath =
     )
 )
 
+
 -- Usage
-processFilesFromList "D:\\file2.txt" "D:\\maxGLB"
+processFilesFromList "C:\\Users\\meta\\Desktop\\file\\max.txt" "D:\\maxGLB"
