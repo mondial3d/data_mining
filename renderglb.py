@@ -5,40 +5,40 @@ from mathutils import Vector, Euler
 import random
 import string
 
-def setup_scene():
-    # Set the rendering engine to Cycles
-    bpy.context.scene.render.engine = 'CYCLES'
 
-    # Enable GPU rendering
-    bpy.context.preferences.addons['cycles'].preferences.compute_device_type = 'OPTIX'  # Using OPTIX for RTX cards
-
-    # Set the device to GPU
+def setup_gpu():
+    # Set the compute device type to 'OPTIX' for RTX cards
+    bpy.context.preferences.addons['cycles'].preferences.compute_device_type = 'OPTIX'
     bpy.context.preferences.addons['cycles'].preferences.get_devices()
+
+    # Enable the GPU device for rendering
     for device in bpy.context.preferences.addons['cycles'].preferences.devices:
         if device.type == 'OPTIX':
             device.use = True
 
-    bpy.context.scene.cycles.device = 'GPU'
+    print("GPU setup for RTX 4080 complete.")
+
+
+def setup_scene():
+    setup_gpu()
+
+    # Set the rendering engine to Eevee
+    bpy.context.scene.render.engine = 'BLENDER_EEVEE'
 
     # Clear existing scene
     bpy.ops.object.select_all(action='SELECT')
     bpy.ops.object.delete()
-   
-
-    # Set up ambient lighting
-    bpy.context.scene.world.light_settings.use_ambient_occlusion = True
-    bpy.context.scene.world.light_settings.ao_factor = 1.5  # Slightly increased
 
     # Set background to white
     bpy.data.worlds['World'].node_tree.nodes['Background'].inputs[0].default_value = (1, 1, 1, 1)
 
-    # Add a sun lamp for stronger shadows
+    # Add a sun lamp for lighting
     sun_lamp_data = bpy.data.lights.new(name="Sun", type='SUN')
     sun_lamp_object = bpy.data.objects.new(name="Sun", object_data=sun_lamp_data)
     bpy.context.scene.collection.objects.link(sun_lamp_object)
-    sun_lamp_object.location = (10, 10, 20)  # Adjust for desired shadow direction
+    sun_lamp_object.location = (10, 10, 20)
     sun_lamp_object.rotation_euler = Euler((math.radians(50.0), math.radians(30.0), math.radians(45.0)), 'XYZ')
-    sun_lamp_data.energy = 5.0  # Increased for stronger shadows
+    sun_lamp_data.energy = 5.0
 
     # Add a camera
     cam = bpy.data.cameras.new("Camera")
@@ -113,11 +113,20 @@ def import_and_process(file_path, output_folder):
 
         fit_camera_to_objects(cam_obj, imported_objects)
 
-        # Adjust render settings
-        bpy.context.scene.render.engine = 'CYCLES'
-        bpy.context.scene.cycles.samples = 32
-        bpy.context.scene.render.resolution_x = 960
-        bpy.context.scene.render.resolution_y = 540
+        # Switch to Eevee
+        bpy.context.scene.render.engine = 'BLENDER_EEVEE'
+
+        # Eevee settings for faster rendering
+        bpy.context.scene.eevee.taa_render_samples = 16  # Lower sample count for speed
+        bpy.context.scene.eevee.shadow_cube_size = '512'  # Basic shadow quality
+        bpy.context.scene.eevee.use_soft_shadows = True  # Enable soft shadows
+
+        # Simplify lighting setup
+        # Assuming a sun lamp has already been added in setup_scene()
+
+        # Adjust render settings for faster output
+        bpy.context.scene.render.resolution_x = 640  # Lower resolution
+        bpy.context.scene.render.resolution_y = 360  # Lower resolution
         bpy.context.scene.render.image_settings.file_format = 'PNG'
 
         # Create the filename for the rendered image
@@ -125,19 +134,21 @@ def import_and_process(file_path, output_folder):
         render_output = os.path.join(output_folder, base_name + '.png')
 
         # Render and save PNG
+        # Render and save PNG
         bpy.context.scene.render.filepath = render_output
         bpy.ops.render.render(write_still=True)
 
     except Exception as e:
         print(f"Error processing {file_path}: {e}")
 
+
         
 # Read the file list from the previously generated file
-with open('C:\\Users\\meta\\Desktop\\file\\render.txt', 'r') as file:
+with open('C:\\Users\\meta\\Desktop\\file\\render2.txt', 'r') as file:
     files_to_process = file.read().splitlines()
 
 # Loop through each file
-output_folder = 'D:\\maxGLB'  # Update to your desired output folder
+output_folder = 'C:\\Users\\meta\\Desktop\\file\\export'  # Update to your desired output folder
 for file_path in files_to_process:
     import_and_process(file_path, output_folder)
 
@@ -170,3 +181,6 @@ for file_path in files_to_process:
 #Assuming Blender's executable is in this directory, run the script with the following command:
 
 #blender --background --python c:\renderglb.py 
+
+
+# "C:\Program Files\Blender Foundation\Blender 3.6\blender.exe" --background --python "c:\renderglb.py"
